@@ -133,14 +133,13 @@ int gen_connections(){
         if(cxCount[i] <= MINROOMX ) { // no reason to add more connections than necessary
 
             //make a random number of connections for the room
-            //todo There is no reason for it to try an fill the whole matrix we only need half but...
             while (cxCount[i] < numCx) {
 //
                 int conx = rand() % nRooms;
                 //dont connect if the connecting room as too many conection or the room is the same
                 if (cxCount[conx] < MAXCONNECTIONS && conx != i){
 
-                    if ((conxMatrix[i][conx] == 0) && (conxMatrix[conx][i] == 0)) {
+                    if ((conxMatrix[i][conx] == 0) && (conxMatrix[conx][i] == 0) ) {
                         conxMatrix[i][conx] = 1;
                         conxMatrix[conx][i] = 1;
                         cxCount[i]++;
@@ -156,7 +155,7 @@ int gen_connections(){
 
         int count =1;
         for(j=0; j < nRooms; j++) {
-            if (conxMatrix[i][j] == 1) {
+            if ((conxMatrix[i][j] == 1)) {
                 fprintf(ConnectFile, "CONNECTION %i: %s\n", count, rooms_str[j]);
                 count++;
             }
@@ -169,6 +168,36 @@ int gen_connections(){
     return 0;
 }
 
+int gen_room_type(){
+    int i, room1, room2, nRooms;
+    FILE * fp;
+    nRooms = ARYSZ(rooms_str);
+
+    room1 = rand() % nRooms;
+    room2 = rand() % nRooms;
+    //make sure we get two differnt ones
+    while(room1 == room2){
+        room2 = rand() % nRooms;
+    }
+
+    fp = open_file(dirName, rooms_str[room1], "a+"); // opening the file
+        fprintf(fp, "ROOM TYPE: START_ROOM\n");
+    close(fp);
+
+    fp = open_file(dirName, rooms_str[room2], "a+"); // opening the file
+    fprintf(fp, "ROOM TYPE: END_ROOM\n");
+    close(fp);
+
+    for(i=0; i < nRooms; i++){
+        if ((i != room1) && (i != room2)){
+            fp = open_file(dirName, rooms_str[i], "a+"); // opening the file
+            fprintf(fp, "ROOM TYPE: MID_ROOM\n");
+            close(fp);
+        }
+
+    }
+
+}
 
 int main(int argc, char *argv[]) {
 
@@ -177,6 +206,7 @@ int main(int argc, char *argv[]) {
         error("check");
     };
     gen_connections();
+    gen_room_type();
 
 //    int nRooms = ARYSZ(rooms_str);
 //    printf("arraySize %i", nRooms);
