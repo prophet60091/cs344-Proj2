@@ -11,9 +11,11 @@
 #include <sys/stat.h>
 
 #define ARYSZ(x)  ( (sizeof(x) / sizeof((x)[0])) )
+
 char NAME[10];
 const int  MINROOMX = 3; // minimum number of room connections
-char *rooms_str[]={ "Dumbeldor's Office", "Raven Claw Commons", "Hufflepuff Commons","Slytherin Commons","Gryffendor Commons", "Room of Requirement", "Great Hall", "Potions", "Divination", "Hospital" };
+const int MAXCONNECTIONS = 6;
+char *rooms_str[]={ "Dumbeldor's Office", "Room of Requirement", "Great Hall", "Potions", "Divination", "Hospital", "Herbology" };
 const char *rooms_indi[]={"ROOM NAME:", "ROOM TYPE:", "CONNECTION:"};
 char dirName[] = "./Jackrobe.Rooms.";
 
@@ -126,18 +128,18 @@ int gen_connections(){
     for( i= 0; i < nRooms; i++) {
         // set the number of connection to be made
         srand(time(NULL));
-        int numCx = rand() % 3 + MINROOMX; // number of connections to be added to each room
+        int numCx = rand() % 4 + MINROOMX; // number of connections to be added to each room
 
-        if(cxCount[i] < 4) { // no reason to add more connections than necessary
+        if(cxCount[i] <= MINROOMX ) { // no reason to add more connections than necessary
 
             //make a random number of connections for the room
             //todo There is no reason for it to try an fill the whole matrix we only need half but...
             while (cxCount[i] < numCx) {
-
-                srand(time(NULL) + i + j);
+//
                 int conx = rand() % nRooms;
+                //dont connect if the connecting room as too many conection or the room is the same
+                if (cxCount[conx] < MAXCONNECTIONS && conx != i){
 
-                if (conx != i) { // no connecting same room
                     if ((conxMatrix[i][conx] == 0) && (conxMatrix[conx][i] == 0)) {
                         conxMatrix[i][conx] = 1;
                         conxMatrix[conx][i] = 1;
@@ -170,20 +172,21 @@ int gen_connections(){
 
 int main(int argc, char *argv[]) {
 
-    //get_user();
+//    //get_user();
     if(gen_files()){
         error("check");
     };
     gen_connections();
 
 //    int nRooms = ARYSZ(rooms_str);
+//    printf("arraySize %i", nRooms);
 //    int i;
 //    for(i=0; i < 100; i++){
 //        srand(time(NULL) + i );
-//        int numCx = rand() % 3 + MINROOMX;
+//        int numCx = rand() % 4 + MINROOMX;
 //        srand(time(NULL) + i );
 //        int conx = rand() % nRooms;
-//        printf("NUM CX\tROOM#\n%i\t%i\n", numCx,conx );
+//        printf("NUM CX\tROOM#\n%i\t\t%i\n", numCx,conx );
 //    }
 }
 
