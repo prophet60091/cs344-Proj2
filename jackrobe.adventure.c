@@ -13,29 +13,29 @@
 #include <assert.h>
 #define ARYSZ(x)  ( (sizeof(x) / sizeof((x)[0])) )
 
-
 //*********************FUNCTIONS
 FILE * open_file(char * dir, char * fileName, char * action);
 int  get_room_type(char * file); //gets the type of room
-int gen_files();
-int gen_connections();
-int gen_room_type();
-char * find_start_room();
-
+int gen_files(); //generates the room files name only
+int gen_connections(); // generates all random connections appends them to the file
+int gen_room_type(); // gives each room a random type
+char * find_start_room(); // locates which file to start at
+void display_EOG(); // displays end-of-game message
+void increase_path(char * pathname); // adds to the path
+void cleanUp(); // removes two tmp files
 //*********************VARIABLES
-char NAME[10];
+
 const int  MINROOMX = 3; // minimum number of room connections
 const int MAXCONNECTIONS = 6; // maximum number of connections per room
 const int MAXROOMS = 7; // max number of rooms in play
 char *rooms_str[]={ "Dumbeldor's Office", "Room_of_Requirement", "Great_Hall", "Potions", "Divination", "Hospital", "Herbology", "Owlry", "Gryffendor_Commons", "Slytherin_Commons" };
 //char *roomsTypes_str[]={ "MID_ROOM", "END_ROOM", "START_ROOM"};
 enum roomTypes{ MID_ROOM=-1, END_ROOM=1, START_ROOM=0 };
-int inPlay[10]={0,1,2,3,4,5,6,7,8,9}; // arry to track which rooms are in play
-char connections[250]={}; // holding possible connections
+int inPlay[10]={0,1,2,3,4,5,6,7,8,9}; // array to track which rooms are in play
+char ans[50];
 char dirName[] = "./Jackrobe.Rooms.";
 int GAMEOVER =0;
-
-
+int pCount=0; // the path count
 
 //error function
 void error(char *msg)
@@ -62,31 +62,16 @@ void array_shuffle(int *a, int size){
 }
 
 //
-char * get_direction(){
+void get_direction(){
 
-    char ans[50];
-
-    printf("Where to Next: ");
-
+    memset(ans, 0, 50);
+    printf("\nWHERE TO?> ");
     fgets(ans, 50, stdin);
-//    printf("Hi %s", NAME);
-//
-
-//    if(!strchr(NAME, '\n'))
-//        while(fgetc(stdin)!='\n');//discard until newline
-
-//    printf("\nIs this correct? enter y or n: ");
-//    fgets(ans, 2, stdin);
 
     if(!strchr(ans, '\n'))
         while(fgetc(stdin)!='\n');//discard until newline
 
-//        if((strcmp(ans, "y") == 0 )|| (strcmp(ans, "Y") == 0)){
-//            return 0;
-//        }else{
-//            printf("Try Again - ");
-//        }
-return ans;
+    ans[strcspn(ans, "\n")] = 0;
 }
 
 
@@ -106,10 +91,7 @@ FILE * open_file(char * dir, char * fileName, char * action){
 
     if((fp = fopen(file , action )) < 0) {
 
-        //make sure we write at the end of the file when appending
-        //Man page says it does this with "a" modifier, but it's not working on eos system
         if (strcmp(action, "a") ==0);
-        fseek(fp, 0, SEEK_END);
 
         error("Couldn't open file " );
         return NULL;
@@ -250,7 +232,8 @@ int gen_room_type(){
     }
     return 0;
 }
-
+//#################### FINDS THE STARTING ROOM
+// reads the file director and returns the name of the starting file.
 char * find_start_room(){
 
     DIR *dirP =NULL;
@@ -269,21 +252,40 @@ char * find_start_room(){
         if(rmtyp == 0){
 
             return dirList->d_name;
-
         }
     }
     return NULL;
 }
-
-
+//#################### READS A ROOM FILE
+// @param  the filename to look up
+// Returns 0 for good
+// prints to stdout the location, and connections
+// Sets GAMEOVER=1 if ROOM TYPE IS END_ROOM
 int read_room(char *file){
     FILE * fp;
-    fp = open_file(dirName, file, "r+");
+    FILE * tmp_x; // a file that will hold the list of possible connections
 
-    memset(connections, '\0', 250);
+    fp = open_file(dirName, file, "r+");
+    tmp_x = open_file(dirName, "rooms.tmp", "w"); // temp file for holding possible destinations
+
+    char connections[250]={}; // holding possible connections
     char content[50]={};
     int tCount =0;  //total line count
     int count =0; // current line count
+
+    //error checking
+    if(fp == NULL)
+        error("bad file in file reading");
+    if(tmp_x == NULL)
+        error("bad file in file reading");
+
+    //check first if we have the endgame
+    if (get_room_type(file) == 1){
+        GAMEOVER=1;
+        display_EOG();
+        return 1;
+    }
+
 
     //read the file to get a count of the lines
     while( fscanf(fp, "%*s %*s %49[^\n]",  content ) != EOF){
@@ -293,22 +295,20 @@ int read_room(char *file){
 
     //reading the file (little shout out to Kristen Dhuse, for the help on words with spaces)
     while( fscanf(fp, "%*s %*s %49[^\n]\n",  content ) != EOF){
-
+        //First line is the location
         if(count == 0){
            printf("CURRENT LOCATION:%s\n", content);
 
+        //everything before last line is a connection
         }else if((count >= 1) && (count < tCount-1)){
-            //todo this is a bit dumb. fix it
+
+            fprintf(tmp_x, "%s\n", content);
+
             strcat(connections, content);
-            if (count < tCount-2)
+            if (count < tCount-2){
                 strcat(connections, ", ");
-
-        }else{
-
-            if ( strcmp(content, "END_ROOM") ==  0){
-
-                GAMEOVER=1;
-                printf("Game over!");
+            }else{
+                strcat(connections, ".");
             }
         }
         count++;
@@ -316,6 +316,8 @@ int read_room(char *file){
     printf("POSSIBLE CONNECTIONS: %s", connections);
 
     fclose(fp);
+    fclose(tmp_x);
+
     return 0;
 }
 
@@ -341,12 +343,71 @@ int  get_room_type(char * file){
     }
 }
 
+//#################### Checks destination against answer
+// @param  the filename to look up
+// Returns 0 for good 1 for bad
+int  match_destinations(char * file, char * ans){
+
+    FILE * fp;
+    char dest[50];
+    fp = open_file(dirName, file, "r");
+    //read in each line if it matches return 0
+    while( fscanf(fp, "%49[^\n]\n",  dest ) != EOF){
+
+        if(strcmp(dest, ans) == 0 ) {
+            increase_path(dest);
+            return 0;
+        }
+    }
+    printf("HUH? I DON’T UNDERSTAND THAT ROOM. TRY AGAIN.\n");
+    return 1;
+}
+
+void increase_path(char * pathname){
+    pCount++;
+    FILE *fp;
+    fp = open_file(dirName, "path.tmp", "a");
+
+    fprintf(fp, "%s\n", pathname);
+
+    fclose(fp);
+}
+
+void display_EOG(){
+    FILE *fp;
+    char path[50];
+    fp = open_file(dirName, "path.tmp", "r");
+
+    printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n"
+                   "YOU TOOK %i STEPS. YOUR PATH TO VICTORY WAS:\n", pCount);
+
+    //print out the path
+//    fgets(path, 50, fp);
+//    printf("%s\n", path);
+    while( fscanf(fp, "%49[^\n]\n",  path ) != EOF){
+
+        printf("%s\n", path);
+    }
+
+    fclose(fp);
+    exit(0);
+}
+
+//void cleanUp(){
+//
+//    FILE *fp;
+//    fp = open_file(dirName, "rooms.tmp", "w");
+//    remove(fp)
+//
+//}
+
 int main(int argc, char *argv[]) {
 
     srand(time(NULL));
-    char *room;
-//    //get_user();
-    if(gen_files()){
+    char *room; // pointer to a room name
+    int readState =1; // readState is one keep on reading answers
+
+    if(gen_files() < 0){
         error("check");
     };
     gen_connections();
@@ -354,38 +415,21 @@ int main(int argc, char *argv[]) {
     room = find_start_room();
 
     while (!GAMEOVER){
-
+        readState =1; // readState is one keep on reading answers
         read_room(room);
 
+        while(readState == 1){
 
+            get_direction();
+            readState= match_destinations("rooms.tmp", ans);
+        }
 
-        GAMEOVER = 1; //TEMP TODO REMOVE DAT SHIZ
+        room = ans; // change the room and back we go
+
     }
+    //TODO clean TEMP FILES
 
 
-    //get_room_type();
-
-//    int nRooms = ARYSZ(rooms_str);
-//    printf("arraySize %i", nRooms);
-//    int i;
-//    for(i=0; i < 100; i++){
-//        srand(time(NULL) + i );
-//        int numCx = rand() % 4 + MINROOMX;
-//        srand(time(NULL) + i );
-//        int conx = rand() % nRooms;
-//        printf("NUM CX\tROOM#\n%i\t\t%i\n", numCx,conx );
-//    }
-
-//int array[10]={0,1,2,3,4,5,6,7,8,9};
-//    int i;
-//    int * p = inPlay;
-//    array_shuffle(p, 10);
-//    for(i=0; i < 10; i ++){
-//        printf("%i ", inPlay[i]);
-//    }
-char test[] = {"testing, testing3, testing--"};
-    if(strcmp(test, "testing,") == 0)
-        printf("matches");
 exit(0);
 }
 
