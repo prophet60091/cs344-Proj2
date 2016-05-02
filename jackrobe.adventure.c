@@ -109,11 +109,21 @@ FILE * open_file(char * dir, char * fileName, char * action){
     // with the ROOM: + Room Name
     FILE *fp;
 
+
+
     if((fp = fopen(file , action )) < 0) {
-        error("Couldn't open file " );;
-    }else{
-        return fp;
+
+        //make sure we write at the end of the file when appending
+        //Man page says it does this with "a" modifier, but it's not working on eos system
+        if (strcmp(action, "a") ==0);
+        fseek(fp, 0, SEEK_END);
+
+        error("Couldn't open file " );
+        return NULL;
     }
+
+    return fp;
+
 }
 
 //todo Ideally combine the file generation inside one function to minimize open/closes
@@ -166,7 +176,7 @@ int gen_connections(){
     int cxCount[MAXROOMS]; // number of connections in a room
     memset(cxCount, 0, sizeof(cxCount));
 
-    FILE * ConnectFile;
+    FILE *fp;
 
     //cycle over the files
     for( i= 0; i < MAXROOMS; i++) {
@@ -177,7 +187,7 @@ int gen_connections(){
         if(cxCount[i] <= MINROOMX ) {
 
             while (cxCount[i] < numCx) {//make a random number of connections for the room
-//
+
                 int conx = rand() % MAXROOMS;
                 //dont connect if the connecting room as too many conection or the room is the same
                 if (cxCount[conx] < MAXCONNECTIONS && conx != i){
@@ -196,18 +206,18 @@ int gen_connections(){
     // Write info to the files
     for(i=0; i < MAXROOMS; i++){
 
-        ConnectFile = open_file(dirName, rooms_str[inPlay[i]], "a");// opening the file
-        fseek(ConnectFile, 0, SEEK_END);
+        fp = open_file(dirName, rooms_str[inPlay[i]], "a");// opening the file
+
         int count =1;
         for(j=0; j < MAXROOMS; j++) {
             if ((conxMatrix[i][j] == 1)) {
-                fprintf(ConnectFile, "CONNECTION %i: %s\n", count, rooms_str[inPlay[j]]);
+                fprintf(fp, "CONNECTION %i: %s\n", count, rooms_str[inPlay[j]]);
                 count++;
             }
             //printf("%i ", conxMatrix[i][j]);
         }
         //printf("\n");
-        close(ConnectFile);
+        close(fp);
     }
     return 0;
 }
@@ -261,8 +271,8 @@ int read_file(){
     fp = open_file("D://CS//cs344//Proj2", "test", "r+");
 
     char * action[50];
-    char * connections[50]={};
-    char * content[50];
+    char connections[50]={};
+    char content[50];
     char * ROOMNAME;
     int tCount =0;
     int count =0;
