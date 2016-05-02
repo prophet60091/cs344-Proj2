@@ -197,6 +197,7 @@ int gen_connections(){
     for(i=0; i < MAXROOMS; i++){
 
         ConnectFile = open_file(dirName, rooms_str[inPlay[i]], "a");// opening the file
+        fseek(ConnectFile, 0, SEEK_END);
         int count =1;
         for(j=0; j < MAXROOMS; j++) {
             if ((conxMatrix[i][j] == 1)) {
