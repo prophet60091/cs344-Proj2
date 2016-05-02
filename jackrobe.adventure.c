@@ -2,7 +2,8 @@
 // Created by Robert on 4/20/2016.
 //
 #include <stdio.h>
-#include <sys/types.h>
+#include <dirent.h>
+
 #include <sys/socket.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,23 +11,27 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <assert.h>
-
-# ifndef TYPE
-# define TYPE      void*
-# endif
-typedef struct Room Room;
-
 #define ARYSZ(x)  ( (sizeof(x) / sizeof((x)[0])) )
 
+
+//*********************FUNCTIONS
+FILE * open_file(char * dir, char * fileName, char * action);
+int  get_room_type(char * file); //gets the type of room
+int gen_files();
+int gen_connections();
+int gen_room_type();
+char * find_start_room();
+
+//*********************VARIABLES
 char NAME[10];
 const int  MINROOMX = 3; // minimum number of room connections
 const int MAXCONNECTIONS = 6; // maximum number of connections per room
 const int MAXROOMS = 7; // max number of rooms in play
-char *rooms_str[]={ "Dumbeldor's_Office", "Room_of_Requirement", "Great_Hall", "Potions", "Divination", "Hospital", "Herbology", "Owlry", "Gryffendor_Commons", "Slytherin_Commons" };
-char *roomsTypes_str[]={ "MID_ROOM", "END_ROOM", "START_ROOM"};
-
+char *rooms_str[]={ "Dumbeldor's Office", "Room_of_Requirement", "Great_Hall", "Potions", "Divination", "Hospital", "Herbology", "Owlry", "Gryffendor_Commons", "Slytherin_Commons" };
+//char *roomsTypes_str[]={ "MID_ROOM", "END_ROOM", "START_ROOM"};
+enum roomTypes{ MID_ROOM=-1, END_ROOM=1, START_ROOM=0 };
 int inPlay[10]={0,1,2,3,4,5,6,7,8,9}; // arry to track which rooms are in play
-
+char connections[250]={}; // holding possible connections
 char dirName[] = "./Jackrobe.Rooms.";
 int GAMEOVER =0;
 
@@ -57,43 +62,33 @@ void array_shuffle(int *a, int size){
 }
 
 //
-//int get_user(){
+char * get_direction(){
+
+    char ans[50];
+
+    printf("Where to Next: ");
+
+    fgets(ans, 50, stdin);
+//    printf("Hi %s", NAME);
 //
-//    char ans[2];
-//    while(1){
-//        printf("Enter user name (10 chars max): ");
-//
-//        fgets(NAME, 10, stdin);
-//        printf("Hi %s", NAME);
-//
-//
-//        if(!strchr(NAME, '\n'))
-//            while(fgetc(stdin)!='\n');//discard until newline
-//
-//        printf("\nIs this correct? enter y or n: ");
-//        fgets(ans, 2, stdin);
-//
-//        if(!strchr(ans, '\n'))
-//            while(fgetc(stdin)!='\n');//discard until newline
-//
+
+//    if(!strchr(NAME, '\n'))
+//        while(fgetc(stdin)!='\n');//discard until newline
+
+//    printf("\nIs this correct? enter y or n: ");
+//    fgets(ans, 2, stdin);
+
+    if(!strchr(ans, '\n'))
+        while(fgetc(stdin)!='\n');//discard until newline
+
 //        if((strcmp(ans, "y") == 0 )|| (strcmp(ans, "Y") == 0)){
 //            return 0;
 //        }else{
 //            printf("Try Again - ");
 //        }
-//    }
-//}
-//int add_to_file(char * txt, FILE * fp){
-//
-//    if(fopen(fp, "a") < 0)
-//        error("Couldn't open file");
-//
-//    if(fprintf(fp, "\n%s", txt) < 0)
-//        error("Couldn't write to file");
-//
-//    close(fp);
-//    return 0;
-//}
+return ans;
+}
+
 
 //#################### OPENS FILES
 // @param  the directory
@@ -119,9 +114,7 @@ FILE * open_file(char * dir, char * fileName, char * action){
         error("Couldn't open file " );
         return NULL;
     }
-
     return fp;
-
 }
 
 //todo Ideally combine the file generation inside one function to minimize open/closes
@@ -131,21 +124,21 @@ int gen_files(){
 
     int i;
     char buff[12];
+    int nRooms = ARYSZ(rooms_str); // the number of rooms
+    int * arryP = inPlay;
+    FILE * fp;
 
     //get the pid into a char
     snprintf(buff, 12, "%d", getpid());
 
-    //make the dir to hold files pid
+    //updating the dirName to have the PID, and making the directory
     // http://stackoverflow.com/questions/7430248/creating-a-new-directory-in-c
     struct stat st = {0};
     if (stat(strcat(dirName, buff), &st) == -1) {
         mkdir(dirName, 0700);
     }
 
-    int nRooms = ARYSZ(rooms_str); // the number of rooms
-    int * arryP = inPlay;
     array_shuffle(arryP, nRooms); // reshuffle and use only the first 7 from here on out
-    FILE * fp;
 
     for( i= 0; i < MAXROOMS; i++){
 
@@ -246,7 +239,7 @@ int gen_room_type(){
     fprintf(fp, "ROOM TYPE: END_ROOM\n");
     fclose(fp);
 
-    // Add the defualt midroom to the remainder
+    // Add the default midroom to the remainder of rooms
     for(i=0; i < MAXROOMS; i++){
         if ((i != room1) && (i != room2)){
             fp = open_file(dirName, rooms_str[inPlay[i]], "a");
@@ -258,38 +251,57 @@ int gen_room_type(){
     return 0;
 }
 
-int find_start_room(){
+char * find_start_room(){
 
+    DIR *dirP =NULL;
+    struct dirent * dirList = NULL; //pointer to a dirent struct
 
+    // look at the directory where files are
+    dirP = opendir(dirName);
+
+    if(dirP == NULL)
+        error("cannot read the directory, bruh");
+
+    //loop though it, checking the room type. if found we have a start location
+    while ((dirList = readdir(dirP)) != NULL){
+        int rmtyp;
+        rmtyp = get_room_type(dirList->d_name);
+        if(rmtyp == 0){
+
+            return dirList->d_name;
+
+        }
+    }
+    return NULL;
 }
 
 
-int read_file(){
+int read_room(char *file){
     FILE * fp;
-    fp = open_file("D://CS//cs344//Proj2", "test", "r+");
+    fp = open_file(dirName, file, "r+");
 
-    char * action[50];
-    char connections[50]={};
-    char content[50];
-    char * ROOMNAME;
-    int tCount =0;
-    int count =0;
+    memset(connections, '\0', 250);
+    char content[50]={};
+    int tCount =0;  //total line count
+    int count =0; // current line count
 
-    while( fscanf(fp, "%*s %*s %s",  content ) != EOF){
+    //read the file to get a count of the lines
+    while( fscanf(fp, "%*s %*s %49[^\n]",  content ) != EOF){
         tCount++;
     }
-    rewind(fp);
+    rewind(fp); // reset the pointer in the file
 
-    while( fscanf(fp, "%*s %*s %s\n",  content ) != EOF){
+    //reading the file (little shout out to Kristen Dhuse, for the help on words with spaces)
+    while( fscanf(fp, "%*s %*s %49[^\n]\n",  content ) != EOF){
 
         if(count == 0){
            printf("CURRENT LOCATION:%s\n", content);
 
-
         }else if((count >= 1) && (count < tCount-1)){
-
+            //todo this is a bit dumb. fix it
             strcat(connections, content);
-            strcat(connections, ", ");
+            if (count < tCount-2)
+                strcat(connections, ", ");
 
         }else{
 
@@ -298,27 +310,60 @@ int read_file(){
                 GAMEOVER=1;
                 printf("Game over!");
             }
-
         }
-
         count++;
     }
-
     printf("POSSIBLE CONNECTIONS: %s", connections);
 
     fclose(fp);
+    return 0;
+}
 
+//#################### GETS ROOM TYPE
+// @param  the filename to look up
+// Returns 2 for END, 1 for START, -1 FOR a MID_ROOM
+int  get_room_type(char * file){
+
+    FILE * fp;
+    char roomTyp[9];
+    fp = open_file(dirName, file, "r");
+    fseek(fp, -8, SEEK_END);
+
+    while( fscanf(fp, "%s",  roomTyp ) != EOF){
+
+        if(strcmp(roomTyp, "RT_ROOM") == 0 ){
+            return START_ROOM;
+        }else if(strcmp(roomTyp, "ND_ROOM") == 0){
+            return END_ROOM;
+        }else{
+            return MID_ROOM;
+        }
+    }
 }
 
 int main(int argc, char *argv[]) {
 
     srand(time(NULL));
+    char *room;
 //    //get_user();
     if(gen_files()){
         error("check");
     };
     gen_connections();
     gen_room_type();
+    room = find_start_room();
+
+    while (!GAMEOVER){
+
+        read_room(room);
+
+
+
+        GAMEOVER = 1; //TEMP TODO REMOVE DAT SHIZ
+    }
+
+
+    //get_room_type();
 
 //    int nRooms = ARYSZ(rooms_str);
 //    printf("arraySize %i", nRooms);
@@ -338,7 +383,9 @@ int main(int argc, char *argv[]) {
 //    for(i=0; i < 10; i ++){
 //        printf("%i ", inPlay[i]);
 //    }
-
+char test[] = {"testing, testing3, testing--"};
+    if(strcmp(test, "testing,") == 0)
+        printf("matches");
 exit(0);
 }
 
