@@ -109,8 +109,6 @@ FILE * open_file(char * dir, char * fileName, char * action){
     // with the ROOM: + Room Name
     FILE *fp;
 
-
-
     if((fp = fopen(file , action )) < 0) {
 
         //make sure we write at the end of the file when appending
@@ -217,7 +215,7 @@ int gen_connections(){
             //printf("%i ", conxMatrix[i][j]);
         }
         //printf("\n");
-        close(fp);
+        fclose(fp);
     }
     return 0;
 }
@@ -240,13 +238,13 @@ int gen_room_type(){
         //error("can't open file for start room");
 
     fprintf(fp, "ROOM TYPE: START_ROOM\n");
-    close(fp);
+    fclose(fp);
 
     fp = open_file(dirName, rooms_str[inPlay[room2]], "a"); // opening the file
         //error("can't open file for end room");
 
     fprintf(fp, "ROOM TYPE: END_ROOM\n");
-    close(fp);
+    fclose(fp);
 
     // Add the defualt midroom to the remainder
     for(i=0; i < MAXROOMS; i++){
@@ -254,7 +252,7 @@ int gen_room_type(){
             fp = open_file(dirName, rooms_str[inPlay[i]], "a");
                 //error("cant open files for room types mid_room"); // opening the file
             fprintf(fp, "ROOM TYPE: MID_ROOM\n");
-            close(fp);
+            fclose(fp);
         }
     }
     return 0;
@@ -308,7 +306,7 @@ int read_file(){
 
     printf("POSSIBLE CONNECTIONS: %s", connections);
 
-    close(fp);
+    fclose(fp);
 
 }
 
