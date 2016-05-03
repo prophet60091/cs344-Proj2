@@ -396,13 +396,22 @@ void display_EOG(){
     }
     //Fclose
     fclose(fp);
+    //clean
+    cleanUp();
     //Stop the game
     exit(0);
 }
 
 void cleanUp(){
-    remove("rooms.tmp");
-    remove("path.tmp");
+    //this is clunky as all hell I know, but job is done.
+    char file[50];
+    memset(file, 0, 50); // reset the memory
+    //combine dir name and name of file
+    snprintf(file, 50, "%s/%s", dirName, "rooms.tmp");
+    remove(file);
+    memset(file, 0, 50); // reset the memory
+    snprintf(file, 50, "%s/%s", dirName, "path.tmp");
+    remove(file);
 }
 
 int main(int argc, char *argv[]) {
