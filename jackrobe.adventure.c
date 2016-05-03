@@ -23,13 +23,13 @@ char * find_start_room(); // locates which file to start at
 void display_EOG(); // displays end-of-game message
 void increase_path(char * pathname); // adds to the path
 void cleanUp(); // removes two tmp files
-void get_direction();
+void get_direction();  // getting user input for the room to follow
 //*********************VARIABLES
 
 const int  MINROOMX = 3; // minimum number of room connections
 const int MAXCONNECTIONS = 6; // maximum number of connections per room
 const int MAXROOMS = 7; // max number of rooms in play
-char *rooms_str[]={ "Dumbeldor's Office", "Room_of_Requirement", "Great_Hall", "Potions", "Divination", "Hospital", "Herbology", "Owlry", "Gryffendor_Commons", "Slytherin_Commons" };
+char *rooms_str[]={ "Dumbledor's Office", "Room_of_Requirement", "Great_Hall", "Potions", "Divination", "Hospital", "Herbology", "Owlry", "Gryffindor_Commons", "Slytherin_Commons" };
 //char *roomsTypes_str[]={ "MID_ROOM", "END_ROOM", "START_ROOM"};
 enum roomTypes{ MID_ROOM=-1, END_ROOM=1, START_ROOM=0 };
 int inPlay[10]={0,1,2,3,4,5,6,7,8,9}; // array to track which rooms are in play
@@ -52,7 +52,7 @@ void array_shuffle(int *a, int size){
     if (size > 1)
     {
         int i;
-        for (i = 0; i < rand()% 100 ; i++) {
+        for (i = 0; i < rand()% 100 ; i++) { // why  potential for 100 times...why not?!
             int sp = rand() % 10; // start point for shuffle
             int sw = rand() % 10; // swap point for shuffle
             int t = a[sp]; // hold one
@@ -62,17 +62,19 @@ void array_shuffle(int *a, int size){
     }
 }
 
-//
+//#################### Get Direction of the user
+// sets the ans variable for use in other functions
+// todo change this so that it's not having to rely on a global. sacrificing working for right.
 void get_direction(){
 
-    memset(ans, 0, 50);
+    memset(ans, 0, 50); // set to 0
     printf("\nWHERE TO?> ");
-    fgets(ans, 50, stdin);
+    fgets(ans, 50, stdin); // read form stdin
 
     if(!strchr(ans, '\n'))
         while(fgetc(stdin)!='\n');//discard until newline
 
-    ans[strcspn(ans, "\n")] = 0;
+    ans[strcspn(ans, "\n")] = 0; //get rid of the \n char
 }
 
 
@@ -82,22 +84,20 @@ void get_direction(){
 // @param the action <a, w, r, etc...>
 // Returns 0 on success
 FILE * open_file(char * dir, char * fileName, char * action){
+
     char file[50];
-    //dir name and name of file
+    FILE *fp;
+    //combine dir name and name of file
     snprintf(file, 50, "%s/%s", dir, fileName);
 
     //open the newfile for writing
     // with the ROOM: + Room Name
-    FILE *fp;
-
-    if((fp = fopen(file , action )) < 0) {
-
-        if (strcmp(action, "a") ==0);
+    if((fp = fopen(file , action )) < 0) { // opening failes
 
         error("Couldn't open file " );
         return NULL;
     }
-    return fp;
+    return fp; // returning the file pointer
 }
 
 //todo Ideally combine the file generation inside one function to minimize open/closes
@@ -118,7 +118,7 @@ int gen_files(){
     // http://stackoverflow.com/questions/7430248/creating-a-new-directory-in-c
     struct stat st = {0};
     if (stat(strcat(dirName, buff), &st) == -1) {
-        mkdir(dirName, 0700);
+        mkdir(dirName, 0700); // permissions for the new dir
     }
 
     array_shuffle(arryP, nRooms); // reshuffle and use only the first 7 from here on out
@@ -127,7 +127,7 @@ int gen_files(){
 
         char fLine[50];
 
-        fp = open_file(dirName, rooms_str[inPlay[i]], "w");
+        fp = open_file(dirName, rooms_str[inPlay[i]], "w"); // open for writing
 
         //make the first line
         //write the name of a room to it
@@ -148,7 +148,7 @@ int gen_connections(){
     memset(conxMatrix, 0, sizeof(conxMatrix));
 
     int cxCount[MAXROOMS]; // number of connections in a room
-    memset(cxCount, 0, sizeof(cxCount));
+    memset(cxCount, 0, sizeof(cxCount)); //set to 0
 
     FILE *fp;
 
@@ -162,11 +162,12 @@ int gen_connections(){
 
             while (cxCount[i] < numCx) {//make a random number of connections for the room
 
-                int conx = rand() % MAXROOMS;
+                int conx = rand() % MAXROOMS; //selecting the room that is between 0 and 6
                 //dont connect if the connecting room as too many conection or the room is the same
+                // as the one we are adding to.
                 if (cxCount[conx] < MAXCONNECTIONS && conx != i){
 
-                    if ((conxMatrix[i][conx] == 0) && (conxMatrix[conx][i] == 0) ) { //only change if it hasn't already been
+                    if ((conxMatrix[i][conx] == 0) && (conxMatrix[conx][i] == 0) ) { //only change if it hasn't already been added to either room
                         conxMatrix[i][conx] = 1;
                         conxMatrix[conx][i] = 1;
                         //increase the count of connections for both
@@ -199,7 +200,6 @@ int gen_connections(){
 //#################### GENERATE ROOM TYPES FOR EXISTING ROOMS
 // Returns 0 on success
 int gen_room_type(){
-    /*todo make this happen in the gen files, only it requires the ability to read a file if done that way */
 
     int i, room1, room2;
     FILE * fp;
@@ -249,10 +249,9 @@ char * find_start_room(){
     //loop though it, checking the room type. if found we have a start location
     while ((dirList = readdir(dirP)) != NULL){
         int rmtyp;
-        rmtyp = get_room_type(dirList->d_name);
+        rmtyp = get_room_type(dirList->d_name); // gets the file name from the dir
         if(rmtyp == 0){
-
-            return dirList->d_name;
+            return dirList->d_name; // our answer
         }
     }
     return NULL;
@@ -286,8 +285,6 @@ int read_room(char *file){
         display_EOG();
         return 1;
     }
-
-
     //read the file to get a count of the lines
     while( fscanf(fp, "%*s %*s %49[^\n]",  content ) != EOF){
         tCount++;
@@ -303,9 +300,10 @@ int read_room(char *file){
         //everything before last line is a connection
         }else if((count >= 1) && (count < tCount-1)){
 
-            fprintf(tmp_x, "%s\n", content);
+            fprintf(tmp_x, "%s\n", content); // add content to the file
 
             strcat(connections, content);
+            //formatting the list of connections
             if (count < tCount-2){
                 strcat(connections, ", ");
             }else{
@@ -330,10 +328,15 @@ int  get_room_type(char * file){
     FILE * fp;
     char roomTyp[9];
     fp = open_file(dirName, file, "r");
+    //going to grab the last 8 bits of the file so that we
+    //have just enough information to make a determination as
+    //to what the rooom type is
     fseek(fp, -8, SEEK_END);
 
+    //Read each line of the file
     while( fscanf(fp, "%s",  roomTyp ) != EOF){
 
+        //change return value based on the match
         if(strcmp(roomTyp, "RT_ROOM") == 0 ){
             return START_ROOM;
         }else if(strcmp(roomTyp, "ND_ROOM") == 0){
@@ -352,6 +355,7 @@ int  match_destinations(char * file, char * ans){
     FILE * fp;
     char dest[50];
     fp = open_file(dirName, file, "r");
+
     //read in each line if it matches return 0
     while( fscanf(fp, "%49[^\n]\n",  dest ) != EOF){
 
@@ -360,20 +364,23 @@ int  match_destinations(char * file, char * ans){
             return 0;
         }
     }
+    //User typed garbage in return 1 to start processing again
     printf("HUH? I DON’T UNDERSTAND THAT ROOM. TRY AGAIN.\n");
     return 1;
 }
-
+//#################### Changes the path to victory
+// @param  the filename to look up
+// updates the pCount variable, and writes the additional path to a file
 void increase_path(char * pathname){
     pCount++;
     FILE *fp;
     fp = open_file(dirName, "path.tmp", "a");
-
+    //Adding a path to the file for future lookup
     fprintf(fp, "%s\n", pathname);
 
     fclose(fp);
 }
-
+//#################### End of Game Display
 void display_EOG(){
     FILE *fp;
     char path[50];
@@ -382,25 +389,21 @@ void display_EOG(){
     printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n"
                    "YOU TOOK %i STEPS. YOUR PATH TO VICTORY WAS:\n", pCount);
 
-    //print out the path
-//    fgets(path, 50, fp);
-//    printf("%s\n", path);
+    //read each line of the path and print it out
     while( fscanf(fp, "%49[^\n]\n",  path ) != EOF){
 
         printf("%s\n", path);
     }
-
+    //Fclose
     fclose(fp);
+    //Stop the game
     exit(0);
 }
 
-//void cleanUp(){
-//
-//    FILE *fp;
-//    fp = open_file(dirName, "rooms.tmp", "w");
-//    remove(fp)
-//
-//}
+void cleanUp(){
+    remove("rooms.tmp");
+    remove("path.tmp");
+}
 
 int main(int argc, char *argv[]) {
 
