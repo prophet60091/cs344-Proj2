@@ -1,9 +1,8 @@
 //
-// Created by Robert on 4/20/2016.
+// Created by Robert Jackson on 4/29/2016.
 //
 #include <stdio.h>
 #include <dirent.h>
-
 #include <sys/socket.h>
 #include <string.h>
 #include <stdlib.h>
@@ -24,13 +23,12 @@ void display_EOG(); // displays end-of-game message
 void increase_path(char * pathname); // adds to the path
 void cleanUp(); // removes two tmp files
 void get_direction();  // getting user input for the room to follow
-//*********************VARIABLES
 
+//*********************VARIABLES
 const int  MINROOMX = 3; // minimum number of room connections
 const int MAXCONNECTIONS = 6; // maximum number of connections per room
 const int MAXROOMS = 7; // max number of rooms in play
 char *rooms_str[]={ "Dumbledor's Office", "Room_of_Requirement", "Great_Hall", "Potions", "Divination", "Hospital", "Herbology", "Owlry", "Gryffindor_Commons", "Slytherin_Commons" };
-//char *roomsTypes_str[]={ "MID_ROOM", "END_ROOM", "START_ROOM"};
 enum roomTypes{ MID_ROOM=-1, END_ROOM=1, START_ROOM=0 };
 int inPlay[10]={0,1,2,3,4,5,6,7,8,9}; // array to track which rooms are in play
 char ans[50];
@@ -100,7 +98,6 @@ FILE * open_file(char * dir, char * fileName, char * action){
     return fp; // returning the file pointer
 }
 
-//todo Ideally combine the file generation inside one function to minimize open/closes
 //#################### GENERATE FILES FOR GAME
 // Returns 0 on success
 int gen_files(){
@@ -138,6 +135,7 @@ int gen_files(){
     }
     return(0);
 }
+
 //#################### GENERATE ROOM'S CONNECTIONS
 //creates a matrix then writes that matrix
 // Returns 0 on success
@@ -211,13 +209,11 @@ int gen_room_type(){
     }
 
     fp = open_file(dirName, rooms_str[inPlay[room1]], "a"); // opening the file
-        //error("can't open file for start room");
 
     fprintf(fp, "ROOM TYPE: START_ROOM\n");
     fclose(fp);
 
     fp = open_file(dirName, rooms_str[inPlay[room2]], "a"); // opening the file
-        //error("can't open file for end room");
 
     fprintf(fp, "ROOM TYPE: END_ROOM\n");
     fclose(fp);
@@ -295,7 +291,7 @@ int read_room(char *file){
     while( fscanf(fp, "%*s %*s %49[^\n]\n",  content ) != EOF){
         //First line is the location
         if(count == 0){
-           printf("CURRENT LOCATION:%s\n", content);
+           printf("CURRENT LOCATION: %s\n", content);
 
         //everything before last line is a connection
         }else if((count >= 1) && (count < tCount-1)){
@@ -438,10 +434,7 @@ int main(int argc, char *argv[]) {
         }
 
         room = ans; // change the room and back we go
-
     }
-    //TODO clean TEMP FILES
-
 
 exit(0);
 }
