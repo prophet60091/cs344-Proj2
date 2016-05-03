@@ -23,6 +23,7 @@ char * find_start_room(); // locates which file to start at
 void display_EOG(); // displays end-of-game message
 void increase_path(char * pathname); // adds to the path
 void cleanUp(); // removes two tmp files
+void get_direction();
 //*********************VARIABLES
 
 const int  MINROOMX = 3; // minimum number of room connections
